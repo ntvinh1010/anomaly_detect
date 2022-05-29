@@ -30,7 +30,7 @@ def count_images(path):
     train_imgs = glob.glob(path + "/*.tif", recursive = True)
     for i in train_imgs:
         a+=1
-    return a
+    return print(a)
 
 #Return the list of all images inside "Train" or "Test" files of 2 sets Ped1 and Ped2
 def image_path_list(path):
@@ -38,12 +38,12 @@ def image_path_list(path):
     return train_imgs
 
 #Show 9 example images
-def show_9_example_imgs(imgs):
+def show_9_example_imgs(imgs, img_width, img_height):
     plt.figure(figsize=(20,20))
     nine_random_imgs = np.random.choice(imgs, 9, replace=False)
     for i in range(9):
         im = cv2.imread(nine_random_imgs[i])
-        im_resized = cv2.resize(im, (238, 158), interpolation=cv2.INTER_LINEAR)
+        im_resized = cv2.resize(im, (img_width, img_height), interpolation=cv2.INTER_LINEAR)
         plt.imshow(cv2.cvtColor(im_resized, cv2.COLOR_BGR2RGB))
         # define subplot
         plt.subplot(330 + 1 + i)
@@ -53,9 +53,9 @@ def show_9_example_imgs(imgs):
 def create_dataset(img_folder, img_width, img_height):
     img_data_array=[]
     for dir1 in img_folder:
-        image= cv2.imread(dir1, cv2.COLOR_BGR2RGB)
-        image=cv2.resize(image, (img_height, img_width),interpolation = cv2.INTER_AREA)
-        image=np.array(image)
+        image = cv2.imread(dir1, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, (img_height, img_width),interpolation = cv2.INTER_AREA)
+        image = np.array(image)
         image = image.astype('float32')
         image /= 255 
         img_data_array.append(image)
@@ -92,14 +92,17 @@ def make_convolutional_autoencoder(shape):
 
 #MAIN
 def main():
-    #print total images in "Train" of UCSDPed1
+    #create a list contain all path of images
     train_ped1 = image_path_list(train_path_1)
-    #print(train_ped1)
-    #print total images in "Train" of UCSDPed2
     train_ped2 = image_path_list(train_path_2)
+    #print(train_ped1)
+
+    #print total images in "Train" of UCSDPed1
+    #count_images(train_path_1)
+    #count_images(train_path_2)
 
     #show 9 example images in Ped1 and Ped 2
-    #show_9_example_imgs(train_ped1)
+    show_9_example_imgs(train_ped1, img_width_ped1, img_height_ped1)
     #show_9_example_imgs(train_ped2)
 
     train_ped1_dataset = create_dataset(train_ped1,img_width_ped1 ,img_height_ped1)
