@@ -11,11 +11,16 @@ from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model
 from imutils import paths
 import matplotlib.image as mpimg
+from tensorflow.python.client import device_lib 
 
 
 #Path for training set of Ped1 and Ped2
 train_path_1 = "./UCSDped1/Train/Train*"
 train_path_2 = "./UCSDped2/Train/Train*"
+
+#Path for test set of Ped1 and Ped2
+test_path_1 = "./UCSDped1/Test/Test*"
+test_path_2 = "./UCSDped2/Test/Test*"
 
 #Image dimension of Ped1 and Ped2
 img_width_ped1 = 238
@@ -30,7 +35,7 @@ def count_images(path):
     train_imgs = glob.glob(path + "/*.tif", recursive = True)
     for i in train_imgs:
         a+=1
-    return print(a)
+    return a
 
 #Return the list of all images inside "Train" or "Test" files of 2 sets Ped1 and Ped2
 def image_path_list(path):
@@ -50,22 +55,27 @@ def show_9_example_imgs(imgs, img_width, img_height):
     return plt.show()
 
 #Create dataset and convert its images to value between 0 and 1
-def create_dataset(img_folder, img_width, img_height):
-    img_data_array=[]
-    for dir1 in img_folder:
-        image = cv2.imread(dir1, cv2.COLOR_BGR2RGB)
+def create_dataset(img_folder, img_quantity, img_width, img_height):
+    empty_array = np.empty((img_quantity, img_width, img_height))
+    for dir1 in range(len(img_folder)):
+        image = cv2.imread(img_folder[dir1], cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, (img_height, img_width),interpolation = cv2.INTER_AREA)
         image = np.array(image)
-        image = image.astype('float32')
+        image = image.astype('float64')
         image /= 255 
-        img_data_array.append(image)
-    return img_data_array
+        empty_array[dir1, :, :] = image
+    return empty_array
 
+#Create labels for training set
+def training_labels(img_quantity):
+    return np.zeros((img_quantity, 1))
 
 #Autoencoder
 def make_convolutional_autoencoder(shape):
     # encoding
     inputs = Input(shape)
+    x = Conv2D(16, 3, activation='relu', padding='same')(inputs)
+    x = MaxPooling2D(padding='same')(x)
     x = Conv2D(16, 3, activation='relu', padding='same')(inputs)
     x = MaxPooling2D(padding='same')(x)
     x = Conv2D( 8, 3, activation='relu', padding='same')(x)
@@ -78,7 +88,9 @@ def make_convolutional_autoencoder(shape):
     x = UpSampling2D()(x)
     x = Conv2D( 8, 3, activation='relu', padding='same')(x)
     x = UpSampling2D()(x)
-    x = Conv2D(16, 3, activation='relu')(x) # <= padding='valid'!
+    x = Conv2D(16, 3, activation='relu')(x) 
+    x = UpSampling2D()(x)
+    x = Conv2D(16, 3, activation='relu')(x) 
     x = UpSampling2D()(x)
     decoded = Conv2D(1, 3, activation='sigmoid', padding='same')(x)    
     
@@ -88,32 +100,37 @@ def make_convolutional_autoencoder(shape):
     return autoencoder
 
 
-
-
 #MAIN
 def main():
     #create a list contain all path of images
     train_ped1 = image_path_list(train_path_1)
     train_ped2 = image_path_list(train_path_2)
-    #print(train_ped1)
 
     #print total images in "Train" of UCSDPed1
-    #count_images(train_path_1)
-    #count_images(train_path_2)
+    #print(count_images(train_path_1))
 
     #show 9 example images in Ped1 and Ped 2
-    show_9_example_imgs(train_ped1, img_width_ped1, img_height_ped1)
-    #show_9_example_imgs(train_ped2)
+    #show_9_example_imgs(train_ped1, img_width_ped1, img_height_ped1)
 
-    train_ped1_dataset = create_dataset(train_ped1,img_width_ped1 ,img_height_ped1)
-    #print the values of the first image
-    #print(train_ped1_dataset[1])
-    #print(len(train_ped1_dataset[1]))
-    train_ped1_dataset = create_dataset(train_ped2,img_width_ped2 ,img_height_ped2)
+    #Training label for Ped1 and Ped2
+    train_ped1_label = training_labels(count_images(train_path_1))
+    train_ped2_label = training_labels(count_images(train_path_2))
 
-    #autoencoder = make_convolutional_autoencoder(shape=(238, 158, 1))
+    #Create training dataset for Ped1 and Ped2
+    train_ped1_dataset = create_dataset(train_ped1, count_images(train_path_1), img_width_ped1 ,img_height_ped1)
+    train_ped1_dataset.reshape(-1, img_width_ped1 ,img_height_ped1, 1)
+    #print(train_ped1_dataset.shape)
+    train_ped2_dataset = create_dataset(train_ped2, count_images(train_path_2), img_width_ped2 ,img_height_ped2)
+    train_ped2_dataset.reshape(-1, img_width_ped2 ,img_height_ped2, 1)
+    #print(train_ped2_dataset.shape)
 
-    #autoencoder.summary()
+    #print(device_lib.list_local_devices())
+
+    #Call the autoencoder
+    autoencoder_ped1 = make_convolutional_autoencoder(shape=(img_width_ped1, img_height_ped1, 1))
+    #autoencoder_ped1.summary()
+    #Fitting
+    autoencoder_ped1.fit(train_ped1_dataset, train_ped1_label, epochs=50, batch_size=128)
 
 
 
