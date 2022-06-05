@@ -12,22 +12,23 @@ from keras.models import Model
 from imutils import paths
 from PIL import Image
 from tensorflow.python.client import device_lib 
+from sklearn import metrics
 
 #Declaration
 #Path for training set of Ped1 and Ped2
-train_path_1 = "./UCSDped1/Train/Train*"
-train_path_2 = "./UCSDped2/Train/Train*"
+train_path_1 = ".\\UCSDped1\\Train\\Train*"
+train_path_2 = ".\\UCSDped2\\Train\\Train*"
 
 #Path for test set of Ped1 and Ped2
-test_path_1 = "./UCSDped1/Test/Test*"
-root_path_1 = "./UCSDped1/Test/"
-test_path_2 = "./UCSDped2/Test/Test*"
-root_path_2 = "./UCSDped2/Test/"
+test_path_1 = ".\\UCSDped1\\Test\\Test*"
+root_path_1 = ".\\UCSDped1\\Test"
+test_path_2 = ".\\UCSDped2\\Test\\Test*"
+root_path_2 = ".\\UCSDped2\\Test"
 
 
 #Files in test set which contains anomaly
-anomaly_ped1 = ["Test003", "Test004", "Test014", "Test018", "Test019", "Test021", "Test022", "Test023", "Test024", "Test032"]
-anomaly_ped2 = ["Test001", "Test002", "Test003", "Test004", "Test005", "Test006", "Test007", "Test008", "Test009", "Test010", "Test011", "Test012"]
+anomaly_ped1 = ["\\Test003", "\\Test004", "\\Test014", "\\Test018", "\\Test019", "\\Test021", "\\Test022", "\\Test023", "\\Test024", "\\Test032"]
+anomaly_ped2 = ["\\Test001", "\\Test002", "\\Test003", "\\Test004", "\\Test005", "\\Test006", "\\Test007", "\\Test008", "\\Test009", "\\Test010", "\\Test011", "\\Test012"]
 
 #Image dimension of Ped1 and Ped2\adding-new-column-to-existing-dataframe-in-pandas\
 img_width_ped1 = 238
@@ -47,13 +48,13 @@ img_height_ped2_desire = 236
 #Print the total images inside the set
 def count_images(path):
     a = 0
-    imgs = glob.glob(path + "/*.tif", recursive = True)
+    imgs = glob.glob(path + "\\*.tif", recursive = True)
     for i in imgs:
         a+=1
     return a
 #Return the list of all images inside "Train" or "Test" files of 2 sets Ped1 and Ped2
 def image_path_list(path):
-    imgs = glob.glob(path + "/*.tif", recursive = True)
+    imgs = glob.glob(path + "\\*.tif", recursive = True)
     return imgs
 #Show 9 example images
 def show_9_example_imgs(imgs, img_width, img_height):
@@ -78,9 +79,25 @@ def create_dataset(img_folder, img_quantity, img_width, img_height):
         empty_array[dir1, :, :] = image
     return empty_array
 #Create labels with all ones, meaning normal = 1
-def labels(img_quantity):
+def training_labels(img_quantity):
     labels = np.ones((img_quantity, 1)) 
     return labels
+#Creating labels for test set
+def test_labels(img_quantity, root_path, anomaly_set, test_ped):
+    labels = np.ones((img_quantity, 1))
+    ped = [root_path + s for s in anomaly_set]
+    list = []
+    for i in ped:
+        anomaly = glob.glob(i + "\\*.tif", recursive = True)
+        for a in anomaly:
+            list.append(a)
+    for b in range(img_quantity): 
+        if (test_ped[b] in list):
+            labels[b] = 0
+    return labels
+#Seperate normal data and abnormal data
+def seperate(dataset, label):
+    return
 #Show images before and after being coded
 def show_images(before_images, after_images):
     plt.figure(figsize=(10, 2))
@@ -130,7 +147,7 @@ def make_convolutional_autoencoder(shape):
     
     # autoencoder
     autoencoder = Model(inputs, decoded)
-    autoencoder.compile(optimizer='adam', loss='mae')
+    autoencoder.compile(optimizer='adam', loss='mse')
     return autoencoder
 
 
@@ -151,25 +168,11 @@ def main():
     #show_9_example_imgs(train_ped1, img_width_ped1, img_height_ped1)
 
     #Training label for Ped1 and Ped2
-    train_ped1_label = labels(count_images(train_path_1))
-    train_ped2_label = labels(count_images(train_path_2))
+    train_ped1_label = training_labels(count_images(train_path_1))
+    train_ped2_label = training_labels(count_images(train_path_2))
     #Test lebel for Ped1 and Ped2
-    test_ped1_label = labels(count_images(test_path_1))
-
-    ped1 = [root_path_1 + s for s in anomaly_ped1]
-    list = []
-    for i in ped1:
-        anomaly_1 = glob.glob(i + "/*.tif", recursive = True)
-        for a in anomaly_1:
-            list.append(a)
-    #print(len(list))
-    #print(list)
-    for a in range(count_images(test_path_1)): 
-        print(test_ped1[a])
-        if (test_ped1[a] in list):
-            test_ped1_label[a] = 0
-
-
+    test_ped1_label = test_labels(count_images(test_path_1), root_path_1, anomaly_ped1, test_ped1)
+    test_ped2_label = test_labels(count_images(test_path_2), root_path_2, anomaly_ped2, test_ped2)
 
     #Create training dataset for Ped1 and Ped2
     #The size of image now change to 236x156 in Ped1 and 364x236 in Ped2
@@ -196,10 +199,18 @@ def main():
     #autoencoder_ped1.summary()
 
     #Fitting
-    #autoencoder_ped1 = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=30, batch_size=512, validation_data=(test_ped1_dataset, test_ped1_dataset))
+    autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=64, validation_data=(test_ped1_dataset, test_ped1_dataset))
+    #autoencoder_ped1_history = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=512, validation_data=(test_ped1_dataset, test_ped1_dataset))
+    #Plotting loss
+    #loss_plot(autoencoder_ped1_history)
 
-    #Plotting
-    #loss_plot(autoencoder_ped1)
+    reconstruct_ped1 = autoencoder_ped1.predict(train_ped1_dataset)
+    mse = tf.keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
+    train_loss_ped1 = mse(reconstruct_ped1, train_ped1_dataset)
+    plt.hist(train_loss_ped1[None,:], bins=50)
+    plt.xlabel("Train loss")
+    plt.ylabel("No of examples")
+    plt.show()
 
 
 
