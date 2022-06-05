@@ -95,9 +95,6 @@ def test_labels(img_quantity, root_path, anomaly_set, test_ped):
         if (test_ped[b] in list):
             labels[b] = 0
     return labels
-#Seperate normal data and abnormal data
-def seperate(dataset, label):
-    return
 #Show images before and after being coded
 def show_images(before_images, after_images):
     plt.figure(figsize=(10, 2))
@@ -150,6 +147,13 @@ def make_convolutional_autoencoder(shape):
     autoencoder.compile(optimizer='adam', loss='mse')
     return autoencoder
 
+def mean_squared_error(reconstructed, original):
+    tensor4d_mse = (reconstructed - original) ** 2 #tensor 4d
+    empt_arr = np.zeros((tensor4d_mse.shape[0], 1))
+    #Take the largest loss value in each image, return it into array
+    for i in range(tensor4d_mse.shape[0]):
+        empt_arr[i] = np.amax(tensor4d_mse[i, :, :])
+    return empt_arr
 
 
 #MAIN
@@ -199,19 +203,24 @@ def main():
     #autoencoder_ped1.summary()
 
     #Fitting
-    autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=64, validation_data=(test_ped1_dataset, test_ped1_dataset))
-    #autoencoder_ped1_history = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=512, validation_data=(test_ped1_dataset, test_ped1_dataset))
+    #autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=64, validation_data=(test_ped1_dataset, test_ped1_dataset))
+    autoencoder_ped1_history = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=200, validation_data=(test_ped1_dataset, test_ped1_dataset))
     #Plotting loss
     #loss_plot(autoencoder_ped1_history)
 
     reconstruct_ped1 = autoencoder_ped1.predict(train_ped1_dataset)
-    mse = tf.keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.NONE)
-    train_loss_ped1 = mse(reconstruct_ped1, train_ped1_dataset)
-    plt.hist(train_loss_ped1[None,:], bins=50)
+    #print(reconstruct_ped1.shape)
+
+    #Compute the reconstruction error of the training set and choose threshold
+    train_loss_ped1 = mean_squared_error(reconstruct_ped1, train_ped1_dataset)
+    print(train_loss_ped1.shape)
+    threshold_ped1 = np.mean(train_loss_ped1) + np.std(train_loss_ped1)
+    print("Threshold for ped1: ", threshold_ped1)
+    #Plotting
+    plt.hist(train_loss_ped1, bins=50)
     plt.xlabel("Train loss")
     plt.ylabel("No of examples")
     plt.show()
-
 
 
 if __name__ == '__main__':
