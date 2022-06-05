@@ -13,6 +13,7 @@ from imutils import paths
 from PIL import Image
 from tensorflow.python.client import device_lib 
 from sklearn import metrics
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 #Declaration
 #Path for training set of Ped1 and Ped2
@@ -146,7 +147,7 @@ def make_convolutional_autoencoder(shape):
     autoencoder = Model(inputs, decoded)
     autoencoder.compile(optimizer='adam', loss='mse')
     return autoencoder
-
+#MSE
 def mean_squared_error(reconstructed, original):
     tensor4d_mse = (reconstructed - original) ** 2 #tensor 4d
     empt_arr = np.zeros((tensor4d_mse.shape[0], 1))
@@ -154,6 +155,17 @@ def mean_squared_error(reconstructed, original):
     for i in range(tensor4d_mse.shape[0]):
         empt_arr[i] = np.amax(tensor4d_mse[i, :, :])
     return empt_arr
+#Predict
+def predict(model, data, threshold):
+  reconstructions = model.predict(data)
+  loss = mean_squared_error(reconstructions, data)
+  return tf.math.less(loss, threshold)
+#Statics
+def print_stats(predictions, labels):
+  print("Accuracy = {}".format(accuracy_score(labels, predictions)))
+  print("Precision = {}".format(precision_score(labels, predictions)))
+  print("Recall = {}".format(recall_score(labels, predictions)))
+
 
 
 #MAIN
@@ -213,14 +225,16 @@ def main():
 
     #Compute the reconstruction error of the training set and choose threshold
     train_loss_ped1 = mean_squared_error(reconstruct_ped1, train_ped1_dataset)
-    print(train_loss_ped1.shape)
+    #print(train_loss_ped1.shape)
     threshold_ped1 = np.mean(train_loss_ped1) + np.std(train_loss_ped1)
     print("Threshold for ped1: ", threshold_ped1)
     #Plotting
-    plt.hist(train_loss_ped1, bins=50)
-    plt.xlabel("Train loss")
-    plt.ylabel("No of examples")
-    plt.show()
+    #plt.hist(train_loss_ped1, bins=50)
+    #plt.xlabel("Train loss")
+    #plt.ylabel("No of examples")
+    #plt.show()
+    preds = predict(autoencoder_ped1, test_ped1_dataset, threshold_ped1)
+    print_stats(preds, test_ped1_label)
 
 
 if __name__ == '__main__':
