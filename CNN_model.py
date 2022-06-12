@@ -1,18 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import pandas as pd
 import cv2
 import glob
-import matplotlib.image as mpimg
-import PIL
 from tensorflow import keras
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model
-from imutils import paths
-from PIL import Image
 from tensorflow.python.client import device_lib 
-from sklearn import metrics
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 #Declaration
@@ -31,15 +25,16 @@ root_path_2 = ".\\UCSDped2\\Test"
 anomaly_ped1 = ["\\Test003", "\\Test004", "\\Test014", "\\Test018", "\\Test019", "\\Test021", "\\Test022", "\\Test023", "\\Test024", "\\Test032"]
 anomaly_ped2 = ["\\Test001", "\\Test002", "\\Test003", "\\Test004", "\\Test005", "\\Test006", "\\Test007", "\\Test008", "\\Test009", "\\Test010", "\\Test011", "\\Test012"]
 
-#Image dimension of Ped1 and Ped2\adding-new-column-to-existing-dataframe-in-pandas\
+#Image dimension of Ped1 and Ped2\
 img_width_ped1 = 238
 img_height_ped1 = 158
+img_width_ped2 = 360
+img_height_ped2 = 240
+
 #The desired image size of Ped1 for the ease of autoencoder
 img_width_ped1_desire = 236
 img_height_ped1_desire = 156
 
-img_width_ped2 = 360
-img_height_ped2 = 240
 #The desired image size of Ped2 for the ease of autoencoder
 img_width_ped2_desire = 364
 img_height_ped2_desire = 236
@@ -82,19 +77,6 @@ def create_dataset(img_folder, img_quantity, img_width, img_height):
 #Create labels with all ones, meaning normal = 1
 def training_labels(img_quantity):
     labels = np.ones((img_quantity, 1)) 
-    return labels
-#Creating labels for test set
-def test_labels(img_quantity, root_path, anomaly_set, test_ped):
-    labels = np.ones((img_quantity, 1))
-    ped = [root_path + s for s in anomaly_set]
-    list = []
-    for i in ped:
-        anomaly = glob.glob(i + "\\*.tif", recursive = True)
-        for a in anomaly:
-            list.append(a)
-    for b in range(img_quantity): 
-        if (test_ped[b] in list):
-            labels[b] = 0
     return labels
 #Show images before and after being coded
 def show_images(before_images, after_images):
@@ -149,7 +131,7 @@ def make_convolutional_autoencoder(shape):
     return autoencoder
 #MSE
 def mean_squared_error(reconstructed, original):
-    tensor4d_mse = (reconstructed - original) ** 2 #tensor 4d
+    tensor4d_mse = 1/2 * ((reconstructed - original) ** 2) #tensor 4d
     empt_arr = np.zeros((tensor4d_mse.shape[0], 1))
     #Take the largest loss value in each image, return it into array
     for i in range(tensor4d_mse.shape[0]):
@@ -165,8 +147,37 @@ def print_stats(predictions, labels):
   print("Accuracy = {}".format(accuracy_score(labels, predictions)))
   print("Precision = {}".format(precision_score(labels, predictions)))
   print("Recall = {}".format(recall_score(labels, predictions)))
-
-
+#Create label for anomaly test Ped1
+def create_ped1_test_label(img_quantity):
+    labels = np.ones((img_quantity, 1))
+    labels[290:400, :] = 0 #Test03
+    labels[430:568, :] = 0 #Test04
+    labels[2600:2799, :] = 0 #Test14
+    labels[2453:2520, :] = 0 #Test18
+    labels[2663:2738, :] = 0 #Test19
+    labels[3030:3199, :] = 0 #Test21
+    labels[3215:3307, :] = 0 #Test22
+    labels[3407:3565, :] = 0 #Test23
+    labels[3649:3771, :] = 0 #Test24
+    labels[4200:4250, :] =0 #Test32
+    labels[4364:4415, :] = 0 #Test32
+    return  labels
+#Create label for anomaly test Ped2
+def create_ped2_test_label(img_quantity):
+    labels = np.ones((img_quantity, 1))
+    labels[60:179, :] = 0 #Test01
+    labels[274:359, :] = 0 #Test02
+    labels[360:505, :] = 0 #Test03
+    labels[540:689, :] = 0 #Test04
+    labels[690:819, :] = 0 #Test05
+    labels[840:998, :] = 0 #Test06
+    labels[1064:1199, :] = 0 #Test07
+    labels[1200:1379, :] = 0 #Test08
+    labels[1380:1499, :] = 0 #Test09
+    labels[1500:1649, :] =0 #Test10
+    labels[1650:1829, :] =0 #Test11
+    labels[1916:2009, :] =0 #Test12
+    return  labels
 
 #MAIN
 def main():
@@ -179,16 +190,21 @@ def main():
 
     #print total images in "Train" of UCSDPed1
     #print(count_images(train_path_1))
+    #print(count_images(train_path_2))
+    #print(count_images(test_path_1))
+    #print(count_images(test_path_2))
 
-    #show 9 example images in Ped1 and Ped 2
+    #show 9 example images in training set Ped1
     #show_9_example_imgs(train_ped1, img_width_ped1, img_height_ped1)
 
     #Training label for Ped1 and Ped2
     train_ped1_label = training_labels(count_images(train_path_1))
     train_ped2_label = training_labels(count_images(train_path_2))
     #Test lebel for Ped1 and Ped2
-    test_ped1_label = test_labels(count_images(test_path_1), root_path_1, anomaly_ped1, test_ped1)
-    test_ped2_label = test_labels(count_images(test_path_2), root_path_2, anomaly_ped2, test_ped2)
+    test_ped1_label = create_ped1_test_label(count_images(test_path_1))
+    test_ped1_label = np.array(test_ped1_label, dtype=bool)
+    test_ped2_label = create_ped2_test_label(count_images(test_path_2))
+    test_ped2_label = np.array(test_ped2_label, dtype=bool)
 
     #Create training dataset for Ped1 and Ped2
     #The size of image now change to 236x156 in Ped1 and 364x236 in Ped2
@@ -210,31 +226,40 @@ def main():
     #print(device_lib.list_local_devices())
 
     #Call the autoencoder
-    #autoencoder_ped1 = make_convolutional_autoencoder(shape=(img_width_ped1, img_height_ped1, 1))
-    autoencoder_ped1 = make_convolutional_autoencoder(shape=(img_width_ped1_desire, img_height_ped1_desire, 1))
+    #autoencoder_ped1 = make_convolutional_autoencoder(shape=(img_width_ped1_desire, img_height_ped1_desire, 1))
+    autoencoder_ped2 = make_convolutional_autoencoder(shape=(img_width_ped2_desire, img_height_ped2_desire, 1))
     #autoencoder_ped1.summary()
 
     #Fitting
-    #autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=64, validation_data=(test_ped1_dataset, test_ped1_dataset))
-    autoencoder_ped1_history = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=10, batch_size=200, validation_data=(test_ped1_dataset, test_ped1_dataset))
+
+    #autoencoder_ped1_history = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=20, batch_size=200, validation_data=(test_ped1_dataset, test_ped1_dataset))
+    autoencoder_ped2_history = autoencoder_ped2.fit(train_ped2_dataset, train_ped2_dataset, epochs=20, batch_size=200, validation_data=(test_ped2_dataset, test_ped2_dataset))
     #Plotting loss
     #loss_plot(autoencoder_ped1_history)
+    loss_plot(autoencoder_ped2_history)
 
-    reconstruct_ped1 = autoencoder_ped1.predict(train_ped1_dataset)
+    #reconstruct_ped1 = autoencoder_ped1.predict(train_ped1_dataset)
+    reconstruct_ped2 = autoencoder_ped2.predict(train_ped2_dataset)
     #print(reconstruct_ped1.shape)
+    print(reconstruct_ped2.shape)
 
     #Compute the reconstruction error of the training set and choose threshold
-    train_loss_ped1 = mean_squared_error(reconstruct_ped1, train_ped1_dataset)
+    #train_loss_ped1 = tf.keras.losses.mse(reconstruct_ped1, train_ped1_dataset) #Cost too much resources
+    #train_loss_ped1 = mean_squared_error(reconstruct_ped1, train_ped1_dataset)
+    train_loss_ped2 = mean_squared_error(reconstruct_ped2, train_ped2_dataset)
     #print(train_loss_ped1.shape)
-    threshold_ped1 = np.mean(train_loss_ped1) + np.std(train_loss_ped1)
-    print("Threshold for ped1: ", threshold_ped1)
+    print(train_loss_ped2.shape)
+    #threshold_ped1 = np.mean(train_loss_ped1) + np.std(train_loss_ped1)
+    threshold_ped2 = np.mean(train_loss_ped2) + np.std(train_loss_ped2)
+    #print("Threshold for ped1: ", threshold_ped1)
+    print("Threshold for ped2: ", threshold_ped2)
     #Plotting
-    #plt.hist(train_loss_ped1, bins=50)
-    #plt.xlabel("Train loss")
-    #plt.ylabel("No of examples")
-    #plt.show()
-    preds = predict(autoencoder_ped1, test_ped1_dataset, threshold_ped1)
-    print_stats(preds, test_ped1_label)
+    plt.hist(train_loss_ped2, bins=50)
+    plt.xlabel("Train loss")
+    plt.ylabel("No of examples")
+    plt.show()
+    preds = predict(autoencoder_ped2, test_ped2_dataset, threshold_ped2)
+    print_stats(preds, test_ped2_label)
 
 
 if __name__ == '__main__':
