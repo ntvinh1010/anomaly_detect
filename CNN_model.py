@@ -226,40 +226,40 @@ def main():
     #print(device_lib.list_local_devices())
 
     #Call the autoencoder
-    #autoencoder_ped1 = make_convolutional_autoencoder(shape=(img_width_ped1_desire, img_height_ped1_desire, 1))
-    autoencoder_ped2 = make_convolutional_autoencoder(shape=(img_width_ped2_desire, img_height_ped2_desire, 1))
+    autoencoder_ped1 = make_convolutional_autoencoder(shape=(img_width_ped1_desire, img_height_ped1_desire, 1))
+    #autoencoder_ped2 = make_convolutional_autoencoder(shape=(img_width_ped2_desire, img_height_ped2_desire, 1))
     #autoencoder_ped1.summary()
 
     #Fitting
 
-    #autoencoder_ped1_history = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=20, batch_size=200, validation_data=(test_ped1_dataset, test_ped1_dataset))
-    autoencoder_ped2_history = autoencoder_ped2.fit(train_ped2_dataset, train_ped2_dataset, epochs=20, batch_size=200, validation_data=(test_ped2_dataset, test_ped2_dataset))
+    autoencoder_ped1_history = autoencoder_ped1.fit(train_ped1_dataset, train_ped1_dataset, epochs=20, batch_size=200, validation_data=(test_ped1_dataset, test_ped1_dataset))
+    #autoencoder_ped2_history = autoencoder_ped2.fit(train_ped2_dataset, train_ped2_dataset, epochs=20, batch_size=200, validation_data=(test_ped2_dataset, test_ped2_dataset))
     #Plotting loss
-    #loss_plot(autoencoder_ped1_history)
-    loss_plot(autoencoder_ped2_history)
+    loss_plot(autoencoder_ped1_history)
+    #loss_plot(autoencoder_ped2_history)
 
-    #reconstruct_ped1 = autoencoder_ped1.predict(train_ped1_dataset)
-    reconstruct_ped2 = autoencoder_ped2.predict(train_ped2_dataset)
-    #print(reconstruct_ped1.shape)
-    print(reconstruct_ped2.shape)
+    reconstruct_ped1 = autoencoder_ped1.predict(train_ped1_dataset)
+    #reconstruct_ped2 = autoencoder_ped2.predict(train_ped2_dataset)
+    print(reconstruct_ped1.shape)
+    #print(reconstruct_ped2.shape)
 
     #Compute the reconstruction error of the training set and choose threshold
     #train_loss_ped1 = tf.keras.losses.mse(reconstruct_ped1, train_ped1_dataset) #Cost too much resources
-    #train_loss_ped1 = mean_squared_error(reconstruct_ped1, train_ped1_dataset)
-    train_loss_ped2 = mean_squared_error(reconstruct_ped2, train_ped2_dataset)
-    #print(train_loss_ped1.shape)
-    print(train_loss_ped2.shape)
-    #threshold_ped1 = np.mean(train_loss_ped1) + np.std(train_loss_ped1)
-    threshold_ped2 = np.mean(train_loss_ped2) + np.std(train_loss_ped2)
-    #print("Threshold for ped1: ", threshold_ped1)
-    print("Threshold for ped2: ", threshold_ped2)
+    train_loss_ped1 = mean_squared_error(reconstruct_ped1, train_ped1_dataset)
+    #train_loss_ped2 = mean_squared_error(reconstruct_ped2, train_ped2_dataset)
+    print(train_loss_ped1.shape)
+    #print(train_loss_ped2.shape)
+    threshold_ped1 = np.mean(train_loss_ped1) + np.std(train_loss_ped1)
+    #threshold_ped2 = np.mean(train_loss_ped2) + np.std(train_loss_ped2)
+    print("Threshold for ped1: ", threshold_ped1)
+    #print("Threshold for ped2: ", threshold_ped2)
     #Plotting
-    plt.hist(train_loss_ped2, bins=50)
+    plt.hist(train_loss_ped1, bins=50)
     plt.xlabel("Train loss")
     plt.ylabel("No of examples")
     plt.show()
-    preds = predict(autoencoder_ped2, test_ped2_dataset, threshold_ped2)
-    print_stats(preds, test_ped2_label)
+    preds = predict(autoencoder_ped1, test_ped1_dataset, threshold_ped1)
+    print_stats(preds, test_ped1_label)
 
 
 if __name__ == '__main__':
